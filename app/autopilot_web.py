@@ -31,7 +31,7 @@ except ImportError:
 
 JWT_ISSUER = "carhack-autopilot"
 SERVICE_TOKEN_ALGORITHM = "HS256"
-SERVICE_SECRET_LABEL = b"carhack-autopilot/service-token/v1"
+SERVICE_SECRET_LABEL = b"carhack-autopilot/service-token/v2"
 JWT_LIFETIME_SECONDS = 15 * 60
 USERNAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 ROUTE_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$")
