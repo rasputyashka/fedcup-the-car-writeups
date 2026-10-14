@@ -368,6 +368,9 @@ class InfotainmentECU:
 
 
 def evaluate_album_art(expression: str, environment: Mapping[str, Any]) -> Any:
+    for key in environment:
+        if "__" in key:
+            return None
     from PIL import ImageMath
 
     return ImageMath.eval(expression, **dict(environment))
