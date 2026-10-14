@@ -79,7 +79,10 @@ def in_band(
     if len(track) < 2:
         raise ValueError("track needs at least two points")
     return any(
-        _distance_to_segment(x, y, track[index], track[(index + 1) % len(track)]) <= width
+        _distance_to_segment(
+            x, y, track[index], track[(index + 1) % len(track)]
+        )
+        <= width
         for index in range(len(track))
     )
 
@@ -95,7 +98,9 @@ def nearest_waypoint_index(
         raise ValueError("track cannot be empty")
     return min(
         range(len(track)),
-        key=lambda index: (track[index][0] - x) ** 2 + (track[index][1] - y) ** 2,
+        key=lambda index: (
+            (track[index][0] - x) ** 2 + (track[index][1] - y) ** 2
+        ),
     )
 
 
@@ -119,7 +124,6 @@ def track_payload() -> list[list[float]]:
 
 
 class PhysicsEngine:
-
     def __init__(
         self,
         state: VehicleState,
@@ -152,12 +156,13 @@ class PhysicsEngine:
         steering = float(current["steering"])
 
         acceleration = (
-            throttle / 255.0 * A_MAX
-            - brake / 255.0 * B_MAX
-            - DRAG * speed
+            throttle / 255.0 * A_MAX - brake / 255.0 * B_MAX - DRAG * speed
         )
         speed = clamp(speed + acceleration * dt, 0.0, V_MAX)
-        heading = float(current["heading"]) + (speed / WHEELBASE) * math.tan(steering) * dt
+        heading = (
+            float(current["heading"])
+            + (speed / WHEELBASE) * math.tan(steering) * dt
+        )
         heading = math.atan2(math.sin(heading), math.cos(heading))
         x = float(current["x"]) + speed * math.cos(heading) * dt
         y = float(current["y"]) + speed * math.sin(heading) * dt

@@ -27,7 +27,6 @@ from trust import CheckerTrust
 
 @dataclass
 class Runtime:
-
     state: VehicleState
     bus: CANBus
     trust: CheckerTrust
@@ -49,7 +48,11 @@ def build_runtime() -> Runtime:
     bus = CANBus()
     stop_event = asyncio.Event()
     store_root = Path(os.environ.get("STORE_ROOT", "/app/stores"))
-    media_dir = Path(os.environ.get("INFOTAINMENT_STORE_DIR", str(store_root / "infotainment")))
+    media_dir = Path(
+        os.environ.get(
+            "INFOTAINMENT_STORE_DIR", str(store_root / "infotainment")
+        )
+    )
     return Runtime(
         state=state,
         bus=bus,
@@ -57,17 +60,23 @@ def build_runtime() -> Runtime:
         engine=EngineECU(bus, state),
         abs=ABSECU(bus, state, storage_dir=store_root / "abs"),
         autopilot=AutopilotECU(bus, state),
-        telemetry=TelemetryECU(bus, state, storage_dir=store_root / "telemetry"),
+        telemetry=TelemetryECU(
+            bus, state, storage_dir=store_root / "telemetry"
+        ),
         infotainment=InfotainmentECU(
             media_dir,
             state,
-            parser_path=os.environ.get("ID3PARSE_PATH", "/app/native/id3parse"),
+            parser_path=os.environ.get(
+                "ID3PARSE_PATH", "/app/native/id3parse"
+            ),
         ),
         physics=PhysicsEngine(state),
         stop_event=stop_event,
         track=track_payload(),
         media_accounts=AccountRegistry(media_dir / "accounts.sqlite3"),
-        blackbox_accounts=AccountRegistry(store_root / "telemetry" / "accounts.sqlite3"),
+        blackbox_accounts=AccountRegistry(
+            store_root / "telemetry" / "accounts.sqlite3"
+        ),
     )
 
 
@@ -127,34 +136,70 @@ async def run_service() -> None:
     _install_signals(runtime.stop_event)
 
     ecu_tasks = [
-        asyncio.create_task(runtime.physics.run(runtime.stop_event), name="physics"),
-        asyncio.create_task(runtime.engine.run(runtime.stop_event), name="engine"),
+        asyncio.create_task(
+            runtime.physics.run(runtime.stop_event), name="physics"
+        ),
+        asyncio.create_task(
+            runtime.engine.run(runtime.stop_event), name="engine"
+        ),
         asyncio.create_task(runtime.abs.run(runtime.stop_event), name="abs"),
-        asyncio.create_task(runtime.autopilot.run(runtime.stop_event), name="autopilot"),
-        asyncio.create_task(runtime.telemetry.run(runtime.stop_event), name="telemetry"),
-        asyncio.create_task(runtime.infotainment.run(runtime.stop_event), name="infotainment"),
+        asyncio.create_task(
+            runtime.autopilot.run(runtime.stop_event), name="autopilot"
+        ),
+        asyncio.create_task(
+            runtime.telemetry.run(runtime.stop_event), name="telemetry"
+        ),
+        asyncio.create_task(
+            runtime.infotainment.run(runtime.stop_event), name="infotainment"
+        ),
     ]
     await asyncio.sleep(0.05)
     cli_server = await start_cli(runtime)
     primary_server = uvicorn.Server(
-        uvicorn.Config(create_api(runtime), host="0.0.0.0", port=8080, workers=1, log_level="warning", lifespan="off")
+        uvicorn.Config(
+            create_api(runtime),
+            host="0.0.0.0",
+            port=8080,
+            workers=1,
+            log_level="warning",
+            lifespan="off",
+        )
     )
-    http_tasks = [asyncio.create_task(primary_server.serve(), name="main-http")]
+    http_tasks = [
+        asyncio.create_task(primary_server.serve(), name="main-http")
+    ]
 
     autopilot_process = _spawn_autopilot_worker()
     autopilot_server: uvicorn.Server | None = None
     if autopilot_process is None:
         autopilot_server = uvicorn.Server(
-            uvicorn.Config(create_autopilot_app(trust=runtime.trust), host="0.0.0.0", port=8888, workers=1, log_level="warning", lifespan="off")
+            uvicorn.Config(
+                create_autopilot_app(trust=runtime.trust),
+                host="0.0.0.0",
+                port=8888,
+                workers=1,
+                log_level="warning",
+                lifespan="off",
+            )
         )
-        http_tasks.append(asyncio.create_task(autopilot_server.serve(), name="autopilot-http"))
+        http_tasks.append(
+            asyncio.create_task(
+                autopilot_server.serve(), name="autopilot-http"
+            )
+        )
 
     try:
         while not runtime.stop_event.is_set():
-            if any(task.done() and task.exception() is not None for task in ecu_tasks + http_tasks):
+            if any(
+                task.done() and task.exception() is not None
+                for task in ecu_tasks + http_tasks
+            ):
                 runtime.stop_event.set()
                 break
-            if autopilot_process is not None and autopilot_process.poll() is not None:
+            if (
+                autopilot_process is not None
+                and autopilot_process.poll() is not None
+            ):
                 runtime.stop_event.set()
                 break
             try:
@@ -168,7 +213,14 @@ async def run_service() -> None:
         primary_server.should_exit = True
         if autopilot_server is not None:
             autopilot_server.should_exit = True
-        for ecu in (runtime.engine, runtime.abs, runtime.autopilot, runtime.telemetry, runtime.infotainment, runtime.physics):
+        for ecu in (
+            runtime.engine,
+            runtime.abs,
+            runtime.autopilot,
+            runtime.telemetry,
+            runtime.infotainment,
+            runtime.physics,
+        ):
             stop = getattr(ecu, "stop", None)
             if callable(stop):
                 stop()
@@ -177,7 +229,9 @@ async def run_service() -> None:
         if autopilot_process is not None and autopilot_process.poll() is None:
             autopilot_process.terminate()
             try:
-                await asyncio.wait_for(asyncio.to_thread(autopilot_process.wait), timeout=5)
+                await asyncio.wait_for(
+                    asyncio.to_thread(autopilot_process.wait), timeout=5
+                )
             except asyncio.TimeoutError:
                 autopilot_process.kill()
                 await asyncio.to_thread(autopilot_process.wait)

@@ -60,7 +60,6 @@ def clamp_u8(value: int | float) -> int:
 
 @dataclass(frozen=True, slots=True)
 class CANFrame:
-
     id: int
     data: bytes
     ts: float = field(default_factory=time.monotonic)
@@ -104,7 +103,6 @@ def _default_logs() -> dict[str, list[str]]:
 
 @dataclass(slots=True)
 class VehicleState:
-
     x: float = 0.0
     y: float = 0.0
     heading: float = 0.0
@@ -117,7 +115,9 @@ class VehicleState:
     ignition: bool = True
     ecus: dict[str, str] = field(default_factory=_default_ecus)
     ecu_logs: dict[str, list[str]] = field(default_factory=_default_logs)
-    _lock: asyncio.Lock = field(default_factory=asyncio.Lock, init=False, repr=False)
+    _lock: asyncio.Lock = field(
+        default_factory=asyncio.Lock, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         self.x = float(self.x)
@@ -140,7 +140,9 @@ class VehicleState:
         normalized_logs = _default_logs()
         for name, lines in self.ecu_logs.items():
             if name in normalized_logs:
-                normalized_logs[name] = [str(line) for line in lines][-MAX_ECU_LOG_LINES:]
+                normalized_logs[name] = [str(line) for line in lines][
+                    -MAX_ECU_LOG_LINES:
+                ]
         self.ecu_logs = normalized_logs
 
     def _set_values(self, values: Mapping[str, Any]) -> None:
@@ -158,7 +160,9 @@ class VehicleState:
         }
         unknown = set(values).difference(allowed)
         if unknown:
-            raise KeyError(f"unsupported vehicle-state fields: {sorted(unknown)!r}")
+            raise KeyError(
+                f"unsupported vehicle-state fields: {sorted(unknown)!r}"
+            )
 
         if "x" in values:
             self.x = float(values["x"])
@@ -263,7 +267,9 @@ class VehicleState:
             "on_track": self.on_track,
             "ignition": self.ignition,
             "ecus": dict(self.ecus),
-            "ecu_logs": {name: list(lines) for name, lines in self.ecu_logs.items()},
+            "ecu_logs": {
+                name: list(lines) for name, lines in self.ecu_logs.items()
+            },
         }
 
     serialize = to_dict
@@ -278,4 +284,6 @@ class VehicleState:
         if ecu not in ECU_NAMES:
             raise KeyError(f"unknown ECU: {ecu}")
         async with self._lock:
-            self.ecu_logs[ecu] = [str(line) for line in lines][-MAX_ECU_LOG_LINES:]
+            self.ecu_logs[ecu] = [str(line) for line in lines][
+                -MAX_ECU_LOG_LINES:
+            ]

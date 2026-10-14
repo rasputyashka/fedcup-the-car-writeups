@@ -24,10 +24,15 @@ def _encode(raw: bytes) -> str:
 
 
 def _decode(value: str) -> bytes:
-    if not isinstance(value, str) or re.fullmatch(r"[A-Za-z0-9_-]+", value) is None:
+    if (
+        not isinstance(value, str)
+        or re.fullmatch(r"[A-Za-z0-9_-]+", value) is None
+    ):
         raise ValueError("invalid challenge encoding")
     try:
-        raw = base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
+        raw = base64.b64decode(
+            value + "=" * (-len(value) % 4), altchars=b"-_", validate=True
+        )
     except (ValueError, binascii.Error) as exc:
         raise ValueError("invalid challenge encoding") from exc
     if _encode(raw) != value:
@@ -46,7 +51,10 @@ class Challenge:
     def __post_init__(self) -> None:
         validate_identifier(self.team_id)
         validate_identifier(self.subject, 256)
-        if not isinstance(self.action, str) or self.action not in {"diag", "admin_provision"}:
+        if not isinstance(self.action, str) or self.action not in {
+            "diag",
+            "admin_provision",
+        }:
             raise ValueError("invalid checker action")
         if type(self.expires_at) is not int or not 0 < self.expires_at < 2**53:
             raise ValueError("invalid challenge expiry")
@@ -54,14 +62,19 @@ class Challenge:
             raise ValueError("invalid challenge nonce")
 
     def _payload(self) -> bytes:
-        return json.dumps({
-            "v": 1,
-            "team_id": self.team_id,
-            "action": self.action,
-            "subject": self.subject,
-            "expires_at": self.expires_at,
-            "nonce": _encode(self.nonce),
-        }, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+        return json.dumps(
+            {
+                "v": 1,
+                "team_id": self.team_id,
+                "action": self.action,
+                "subject": self.subject,
+                "expires_at": self.expires_at,
+                "nonce": _encode(self.nonce),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("ascii")
 
     def message(self) -> bytes:
         return DOMAIN + self._payload()
@@ -71,16 +84,28 @@ class Challenge:
 
     @classmethod
     def from_wire(cls, value: str) -> "Challenge":
-        if not isinstance(value, str) or not 1 <= len(value) <= MAX_CHALLENGE_LENGTH:
+        if (
+            not isinstance(value, str)
+            or not 1 <= len(value) <= MAX_CHALLENGE_LENGTH
+        ):
             raise ValueError("invalid challenge length")
         try:
             fields = json.loads(_decode(value))
-            if not isinstance(fields, dict) or set(fields) != {
-                "v", "team_id", "action", "subject", "expires_at", "nonce"
-            } or type(fields["v"]) is not int or fields["v"] != 1:
+            if (
+                not isinstance(fields, dict)
+                or set(fields)
+                != {"v", "team_id", "action", "subject", "expires_at", "nonce"}
+                or type(fields["v"]) is not int
+                or fields["v"] != 1
+            ):
                 raise ValueError("invalid challenge schema")
-            proof = cls(fields["team_id"], fields["action"], fields["subject"],
-                        fields["expires_at"], _decode(fields["nonce"]))
+            proof = cls(
+                fields["team_id"],
+                fields["action"],
+                fields["subject"],
+                fields["expires_at"],
+                _decode(fields["nonce"]),
+            )
             if proof.to_wire() != value:
                 raise ValueError("noncanonical challenge payload")
             return proof

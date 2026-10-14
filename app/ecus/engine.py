@@ -26,7 +26,6 @@ except ImportError:
 
 
 class EngineECU:
-
     name = "engine"
     PEDAL_SENSOR_AUTHORITY = True
 
@@ -62,12 +61,16 @@ class EngineECU:
     async def handle_frame(self, frame: CANFrame) -> None:
 
         if not frame.data:
-            await self.state.log(self.name, f"ignored empty frame {frame.id:#x}")
+            await self.state.log(
+                self.name, f"ignored empty frame {frame.id:#x}"
+            )
             return
 
         if frame.id == CAN_ENGINE_THROTTLE:
             self._command_throttle = frame.data[0]
-            await self.state.log(self.name, f"throttle command {self._command_throttle}")
+            await self.state.log(
+                self.name, f"throttle command {self._command_throttle}"
+            )
         elif frame.id == CAN_ENGINE_PEDAL:
             self._pedal = (frame.data[0], frame.ts)
             await self.state.log(self.name, f"pedal sensor {frame.data[0]}")
@@ -89,7 +92,9 @@ class EngineECU:
 
     async def _apply_effective_throttle(self) -> None:
         throttle = self._effective_throttle()
-        await self.state.set_controls(throttle=throttle, ignition=self._ignition)
+        await self.state.set_controls(
+            throttle=throttle, ignition=self._ignition
+        )
 
     async def run(self, stop_event: asyncio.Event | None = None) -> None:
 
@@ -105,7 +110,9 @@ class EngineECU:
                 stop_event is None or not stop_event.is_set()
             ):
                 try:
-                    frame = await asyncio.wait_for(self._queue.get(), timeout=0.10)
+                    frame = await asyncio.wait_for(
+                        self._queue.get(), timeout=0.10
+                    )
                 except asyncio.TimeoutError:
                     await self._apply_effective_throttle()
                     continue

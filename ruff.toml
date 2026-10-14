@@ -1,0 +1,96 @@
+line-length = 79
+
+[lint]
+
+select = [
+  "A",    # flake8-builtins
+  "B",    # flake8-bugbear
+  "C4",   # flake8-comprehensions
+  "C90",  # maccabe
+  "COM",  # flake8-commas
+  "D",    # pydocstyle
+  "DTZ",  # flake8-datetimez
+  "E",    # pycodestyle
+  "ERA",  # flake8-eradicate
+  "EXE",  # flake8-executable
+  "F",    # pyflakes
+  "FBT",  # flake8-boolean-trap
+  "FLY",  # pyflint
+  "FURB", # refurb
+  "G",    # flake8-logging-format
+  "I",    # isort
+  "ISC",  # flake8-implicit-str-concat
+  "LOG",  # flake8-logging
+  "N",    # pep8-naming
+  "PERF", # perflint
+  "PIE",  # flake8-pie
+  "PL",   # pylint
+  "PT",   # flake8-pytest-style
+  "PTH",  # flake8-use-pathlib
+  "Q",    # flake8-quotes
+  "RET",  # flake8-return
+  "RSE",  # flake8-raise
+  "RUF",  # ruff
+  "S",    # flake8-bandit
+  "SIM",  # flake8-simpify
+  "SLF",  # flake8-self
+  "SLOT", # flake8-slots
+  "T100", # flake8-debugger
+  "TRY",  # tryceratops
+  "UP",   # pyupgrade
+  "W",    # pycodestyle
+  "YTT",  # flake8-2020
+  "FAST", # fastapi
+  "ANN",  # annotations
+  "BLE",  # blind exceptions
+  "INP",  # implicit package (w/o __init__)
+  "TID",  # tidy-imports (relatives especially)
+  "TD",   # TODOs
+]
+ignore = [
+  "A005", # allow to shadow stdlib and builtin module names
+  # Different doc rules that we don't really care about:
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",    # magic methods
+  "D106",
+  "D107",    # inits
+  "D203",
+  "D212",
+  "D401",
+  "D404",
+  "D405",
+  "D205",
+  "D400",
+  "D415",
+  "PLR09",   # we have our own complexity rules
+  "PLR2004", # do not report magic numbers
+  "PLR6301", # do not require classmethod / staticmethod when self not used
+
+  "N818",
+  # Just wrong in every possible way. If class extends an Exception, then
+  # it's an exception, not an Error. Moreover, Error is smth unrecoverable,
+  # while Exception is not so scary and more routine.
+
+  "RUF002",
+  "RUF003",
+  # Do not work with russian docs
+
+  "ANN401", # allow Any
+
+  "TD002", # allow unauthored todos
+]
+external = ["WPS"]
+exclude = ["docs/**", "examples/**"]
+
+[lint.per-file-ignores]
+"tests/*.py" = [
+  "S101", # asserts
+  "S105", # hardcoded passwords
+]
+"src/presentation/faststream/routes.py" = [
+  "B008", # Path() is from faststream
+]

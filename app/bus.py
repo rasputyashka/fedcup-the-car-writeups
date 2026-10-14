@@ -18,7 +18,6 @@ class _Subscriber:
 
 
 class CANBus:
-
     def __init__(
         self,
         *,
@@ -39,12 +38,17 @@ class CANBus:
         self._lock = asyncio.Lock()
 
     @staticmethod
-    def _normalize_ids(ids: Iterable[int] | int | None) -> frozenset[int] | None:
+    def _normalize_ids(
+        ids: Iterable[int] | int | None,
+    ) -> frozenset[int] | None:
         if ids is None:
             return None
         values = (ids,) if isinstance(ids, int) else tuple(ids)
         normalized = frozenset(int(value) for value in values)
-        if any(identifier < 0 or identifier > CAN_ID_MAX for identifier in normalized):
+        if any(
+            identifier < 0 or identifier > CAN_ID_MAX
+            for identifier in normalized
+        ):
             raise ValueError("subscription contains a non-11-bit CAN id")
         return normalized
 
@@ -62,7 +66,9 @@ class CANBus:
         maxsize: int | None = None,
     ) -> asyncio.Queue[CANFrame]:
 
-        capacity = self._subscriber_queue_size if maxsize is None else int(maxsize)
+        capacity = (
+            self._subscriber_queue_size if maxsize is None else int(maxsize)
+        )
         if capacity <= 0:
             raise ValueError("maxsize must be positive")
         queue: asyncio.Queue[CANFrame] = asyncio.Queue(maxsize=capacity)
@@ -105,7 +111,9 @@ class CANBus:
         frame = CANFrame(int(identifier), bytes(data))
         async with self._lock:
             self._history.append(frame)
-            if self.mirror_diagnostic_history or not is_diagnostic_id(frame.id):
+            if self.mirror_diagnostic_history or not is_diagnostic_id(
+                frame.id
+            ):
                 self.ring.append(frame)
             subscribers = tuple(self.subscribers.items())
 
@@ -121,7 +129,11 @@ class CANBus:
     ) -> CANFrame:
 
         frame = CANFrame(int(identifier), bytes(data))
-        if self.ring and self.ring[-1].id == frame.id and self.ring[-1].data == frame.data:
+        if (
+            self.ring
+            and self.ring[-1].id == frame.id
+            and self.ring[-1].data == frame.data
+        ):
             return self.ring[-1]
         self.ring.append(frame)
         return frame
@@ -154,7 +166,9 @@ class CANBus:
             if identifier is None or frame.id == identifier
         ]
         if identifier is None and not diag_ok:
-            frames = [frame for frame in frames if not is_diagnostic_id(frame.id)]
+            frames = [
+                frame for frame in frames if not is_diagnostic_id(frame.id)
+            ]
         return frames[-n:] if n else []
 
     def sniff(self, n: int = 4096, *, diag_ok: bool = False) -> list[CANFrame]:

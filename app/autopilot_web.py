@@ -93,8 +93,9 @@ def _valid_route_key(key: str) -> bool:
 
 
 class AutopilotStore:
-
-    def __init__(self, root: str | Path, *, lifetime: float | None = None) -> None:
+    def __init__(
+        self, root: str | Path, *, lifetime: float | None = None
+    ) -> None:
         self.retention_seconds = retention_seconds(lifetime)
         self.root = Path(root)
         self.accounts_path = self.root / "accounts.json"
@@ -147,9 +148,13 @@ class AutopilotStore:
             expected = self._decode_b64_field(account.get("digest"))
         except StorageUnavailable:
             raise
-        if not hmac.compare_digest(expected, self._password_digest(password, salt)):
+        if not hmac.compare_digest(
+            expected, self._password_digest(password, salt)
+        ):
             return None
-        return Session(username, "admin" if account.get("admin") is True else "user")
+        return Session(
+            username, "admin" if account.get("admin") is True else "user"
+        )
 
     def account_exists(self, username: str) -> bool:
         if not _valid_username(username):
@@ -175,7 +180,12 @@ class AutopilotStore:
             return False
         with self._lock:
             meta = self._read_json(self.route_meta / f"{key}.json")
-            if isinstance(meta, dict) and meta.get("owner") != username and meta.get("created", 0) > time.time() - self.retention_seconds:
+            if (
+                isinstance(meta, dict)
+                and meta.get("owner") != username
+                and meta.get("created", 0)
+                > time.time() - self.retention_seconds
+            ):
                 return False
             self._write_text(self.route_store / key, secret)
             self._write_json(
@@ -190,13 +200,22 @@ class AutopilotStore:
             return None
         with self._lock:
             meta = self._read_json(self.route_meta / f"{key}.json")
-            if not isinstance(meta, dict) or meta.get("owner") != username or meta.get("created", 0) <= time.time() - self.retention_seconds:
+            if (
+                not isinstance(meta, dict)
+                or meta.get("owner") != username
+                or meta.get("created", 0)
+                <= time.time() - self.retention_seconds
+            ):
                 return None
             return self._read_text(self.route_store / key)
 
     def read_export(self, requested_path: str) -> Optional[str]:
 
-        if not requested_path or "\x00" in requested_path or len(requested_path) > 512:
+        if (
+            not requested_path
+            or "\x00" in requested_path
+            or len(requested_path) > 512
+        ):
             return None
         try:
             candidate = self.exports / requested_path
@@ -232,7 +251,10 @@ class AutopilotStore:
             return None
         with self._lock:
             path = self.admin_store / username
-            if not path.exists() or path.stat().st_mtime <= time.time() - self.retention_seconds:
+            if (
+                not path.exists()
+                or path.stat().st_mtime <= time.time() - self.retention_seconds
+            ):
                 return None
             return self._read_text(path)
 
@@ -288,14 +310,18 @@ class AutopilotStore:
 
     @staticmethod
     def _write_json(path: Path, value: Any) -> None:
-        serialized = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+        serialized = json.dumps(
+            value, separators=(",", ":"), ensure_ascii=False
+        )
         AutopilotStore._atomic_write(path, serialized.encode("utf-8"))
 
     @staticmethod
     def _atomic_write(path: Path, data: bytes) -> None:
         temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
         try:
-            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            descriptor = os.open(
+                temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600
+            )
             with os.fdopen(descriptor, "wb") as handle:
                 handle.write(data)
                 handle.flush()
@@ -341,8 +367,11 @@ class AutopilotStore:
 
 
 class JwtKeyMaterial:
-
-    def __init__(self, private_pem: Optional[str] = None, public_pem: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        private_pem: Optional[str] = None,
+        public_pem: Optional[str] = None,
+    ) -> None:
         configured_private = private_pem or os.environ.get("JWT_RSA_PRIV")
         configured_public = public_pem or os.environ.get("JWT_RSA_PUB")
 
@@ -352,7 +381,9 @@ class JwtKeyMaterial:
                     _normalise_pem(configured_private), password=None
                 )
             except (TypeError, ValueError) as exc:
-                raise ValueError("JWT_RSA_PRIV is not a valid private key") from exc
+                raise ValueError(
+                    "JWT_RSA_PRIV is not a valid private key"
+                ) from exc
             if not isinstance(private_key, rsa.RSAPrivateKey):
                 raise ValueError("JWT_RSA_PRIV must be an RSA private key")
             if configured_public:
@@ -361,15 +392,26 @@ class JwtKeyMaterial:
                         _normalise_pem(configured_public)
                     )
                 except (TypeError, ValueError) as exc:
-                    raise ValueError("JWT_RSA_PUB is not a valid public key") from exc
+                    raise ValueError(
+                        "JWT_RSA_PUB is not a valid public key"
+                    ) from exc
                 if not isinstance(supplied_public, rsa.RSAPublicKey):
                     raise ValueError("JWT_RSA_PUB must be an RSA public key")
-                if supplied_public.public_numbers() != private_key.public_key().public_numbers():
-                    raise ValueError("JWT_RSA_PRIV and JWT_RSA_PUB do not match")
+                if (
+                    supplied_public.public_numbers()
+                    != private_key.public_key().public_numbers()
+                ):
+                    raise ValueError(
+                        "JWT_RSA_PRIV and JWT_RSA_PUB do not match"
+                    )
         elif configured_public:
-            raise ValueError("JWT_RSA_PRIV is required when JWT_RSA_PUB is configured")
+            raise ValueError(
+                "JWT_RSA_PRIV is required when JWT_RSA_PUB is configured"
+            )
         else:
-            private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+            private_key = rsa.generate_private_key(
+                public_exponent=65537, key_size=2048
+            )
 
         public_key = private_key.public_key()
         self._private_pem = private_key.private_bytes(
@@ -389,7 +431,9 @@ class JwtKeyMaterial:
         digest = hashes.Hash(hashes.SHA256())
         digest.update(self._public_der)
         self.kid = _b64url(digest.finalize()[:12])
-        self._service_secret = hashlib.sha256(SERVICE_SECRET_LABEL + self._public_der).digest()
+        self._service_secret = hashlib.sha256(
+            SERVICE_SECRET_LABEL + self._public_der
+        ).digest()
 
     def issue(self, session: Session) -> str:
         now = int(time.time())
@@ -437,7 +481,11 @@ class JwtKeyMaterial:
             ) from None
         username = claims.get("sub")
         role = claims.get("role")
-        if not isinstance(username, str) or not _valid_username(username) or role not in {"user", "admin"}:
+        if (
+            not isinstance(username, str)
+            or not _valid_username(username)
+            or role not in {"user", "admin"}
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="invalid session",
@@ -456,7 +504,11 @@ class JwtKeyMaterial:
                     "alg": "RS256",
                     "kid": self.kid,
                     "n": _b64url(numbers.n.to_bytes(width, "big")),
-                    "e": _b64url(numbers.e.to_bytes((numbers.e.bit_length() + 7) // 8, "big")),
+                    "e": _b64url(
+                        numbers.e.to_bytes(
+                            (numbers.e.bit_length() + 7) // 8, "big"
+                        )
+                    ),
                 }
             ]
         }
@@ -473,7 +525,8 @@ def create_autopilot_app(
     app = FastAPI(title="the_car Autopilot", docs_url=None, redoc_url=None)
     app.state.trust = trust or CheckerTrust.from_environment()
     app.state.store = AutopilotStore(
-        storage_root or os.environ.get("AUTOPILOT_STORE_DIR", "/app/stores/autopilot")
+        storage_root
+        or os.environ.get("AUTOPILOT_STORE_DIR", "/app/stores/autopilot")
     )
     app.state.jwt_keys = JwtKeyMaterial(jwt_private_key, jwt_public_key)
 
@@ -482,7 +535,11 @@ def create_autopilot_app(
         token: Optional[str]
         if authorization:
             scheme, separator, supplied_token = authorization.partition(" ")
-            if scheme.lower() != "bearer" or not separator or not supplied_token:
+            if (
+                scheme.lower() != "bearer"
+                or not separator
+                or not supplied_token
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="authentication required",
@@ -501,7 +558,10 @@ def create_autopilot_app(
 
     def admin_session(session: Session = Depends(current_session)) -> Session:
         if session.role != "admin":
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="administrator required")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="administrator required",
+            )
         return session
 
     @app.get("/api/health")
@@ -517,19 +577,33 @@ def create_autopilot_app(
         try:
             created = app.state.store.create_account(payload.u, payload.p)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if not created:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="registration unavailable")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="registration unavailable",
+            )
         return {"registered": True}
 
     @app.post("/login")
-    def login(payload: CredentialsRequest, response: Response) -> dict[str, str]:
+    def login(
+        payload: CredentialsRequest, response: Response
+    ) -> dict[str, str]:
         try:
             session = app.state.store.authenticate(payload.u, payload.p)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if session is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid credentials",
+            )
         token = app.state.jwt_keys.issue(session)
         response.set_cookie(
             "session",
@@ -538,36 +612,65 @@ def create_autopilot_app(
             samesite="lax",
             max_age=JWT_LIFETIME_SECONDS,
         )
-        return {"access_token": token, "token_type": "bearer", "role": session.role}
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "role": session.role,
+        }
 
     @app.post("/api/route/save")
-    def save_route(payload: RouteSaveRequest, session: Session = Depends(current_session)) -> dict[str, str]:
+    def save_route(
+        payload: RouteSaveRequest, session: Session = Depends(current_session)
+    ) -> dict[str, str]:
         try:
-            saved = app.state.store.save_route(session.username, payload.key, payload.secret)
+            saved = app.state.store.save_route(
+                session.username, payload.key, payload.secret
+            )
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if not saved:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid route key")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="invalid route key",
+            )
         return {"key": payload.key}
 
     @app.get("/api/route/load")
-    def load_route(key: str, session: Session = Depends(current_session)) -> dict[str, str]:
+    def load_route(
+        key: str, session: Session = Depends(current_session)
+    ) -> dict[str, str]:
         try:
             value = app.state.store.load_route(session.username, key)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if value is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="route not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="route not found"
+            )
         return {"key": key, "secret": value}
 
     @app.post("/api/route/export")
-    def create_export(payload: RouteExportRequest, session: Session = Depends(current_session)) -> dict[str, str]:
+    def create_export(
+        payload: RouteExportRequest,
+        session: Session = Depends(current_session),
+    ) -> dict[str, str]:
         try:
             name = app.state.store.write_export(session.username, payload.key)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if name is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="route not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="route not found"
+            )
         return {"name": name}
 
     @app.get("/api/route/export")
@@ -575,26 +678,47 @@ def create_autopilot_app(
         try:
             value = app.state.store.read_export(path)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if value is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="export not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="export not found",
+            )
         return PlainTextResponse(value, media_type="text/plain")
 
     @app.post("/api/checker/challenge")
-    def checker_challenge(payload: CheckerChallengeRequest) -> dict[str, int | str]:
-        if payload.action != "admin_provision" or not _valid_username(payload.username):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="unsupported action")
+    def checker_challenge(
+        payload: CheckerChallengeRequest,
+    ) -> dict[str, int | str]:
+        if payload.action != "admin_provision" or not _valid_username(
+            payload.username
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="unsupported action",
+            )
         try:
             exists = app.state.store.account_exists(payload.username)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if not exists:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="account not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="account not found",
+            )
         issued = app.state.trust.issue("admin_provision", payload.username)
         return {"challenge": issued.value, "expires_in": issued.expires_in}
 
     @app.post("/api/checker/admin/provision")
-    def checker_admin_provision(payload: CheckerProvisionRequest) -> dict[str, bool]:
+    def checker_admin_provision(
+        payload: CheckerProvisionRequest,
+    ) -> dict[str, bool]:
         verified = app.state.trust.verify_and_consume(
             payload.challenge,
             payload.signature,
@@ -602,13 +726,22 @@ def create_autopilot_app(
             subject=payload.username,
         )
         if not verified:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="checker authentication failed")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="checker authentication failed",
+            )
         try:
             provisioned = app.state.store.provision_admin(payload.username)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if not provisioned:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="account not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="account not found",
+            )
         return {"provisioned": True}
 
     @app.post("/api/adminsecret")
@@ -619,29 +752,46 @@ def create_autopilot_app(
         try:
             app.state.store.save_admin_secret(session.username, payload.flag)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         return {"stored": True}
 
     @app.get("/api/adminsecret")
-    def load_admin_secret(session: Session = Depends(admin_session)) -> dict[str, str]:
+    def load_admin_secret(
+        session: Session = Depends(admin_session),
+    ) -> dict[str, str]:
         try:
             value = app.state.store.load_admin_secret(session.username)
         except StorageUnavailable:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable") from None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="storage unavailable",
+            ) from None
         if value is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="secret not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="secret not found",
+            )
         return {"secret": value}
 
     @app.post("/api/mission")
     async def upload_mission(request: Request) -> dict[str, bool]:
         body = await request.body()
         if len(body) > 65536:
-            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="mission too large")
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="mission too large",
+            )
         try:
             text = body.decode("utf-8")
             yaml.load(text, Loader=yaml.Loader)
         except (UnicodeDecodeError, yaml.YAMLError, TypeError, ValueError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid mission") from None
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="invalid mission",
+            ) from None
         return {"accepted": True}
 
     return app
@@ -650,4 +800,11 @@ def create_autopilot_app(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(create_autopilot_app(), host="0.0.0.0", port=8888, workers=1, log_level="warning", lifespan="off")
+    uvicorn.run(
+        create_autopilot_app(),
+        host="0.0.0.0",
+        port=8888,
+        workers=1,
+        log_level="warning",
+        lifespan="off",
+    )

@@ -30,7 +30,6 @@ except ImportError:
 
 
 class AutopilotECU:
-
     name = "autopilot"
 
     def __init__(
@@ -70,13 +69,17 @@ class AutopilotECU:
     async def handle_frame(self, frame: CANFrame) -> None:
 
         if not frame.data:
-            await self.state.log(self.name, f"ignored empty frame {frame.id:#x}")
+            await self.state.log(
+                self.name, f"ignored empty frame {frame.id:#x}"
+            )
             return
         if frame.id == CAN_AUTOPILOT_STEERING:
             target = self._decode_steering(frame.data[0])
             self._manual_steering = (target, frame.ts)
             await self.state.set_controls(steering=target)
-            await self.state.log(self.name, f"manual steering target {target:.3f}")
+            await self.state.log(
+                self.name, f"manual steering target {target:.3f}"
+            )
         elif frame.id == CAN_AUTOPILOT_TURN_SIGNAL:
             signal = int(clamp(frame.data[0], 0, 2))
             await self.state.set_controls(turn_signal=signal)
@@ -84,7 +87,9 @@ class AutopilotECU:
 
     @staticmethod
     def _angle_difference(target: float, current: float) -> float:
-        return math.atan2(math.sin(target - current), math.cos(target - current))
+        return math.atan2(
+            math.sin(target - current), math.cos(target - current)
+        )
 
     async def _control_tick(self) -> None:
         snapshot = await self.state.snapshot()
@@ -107,7 +112,9 @@ class AutopilotECU:
                 target_y - float(snapshot["y"]),
                 target_x - float(snapshot["x"]),
             )
-            error = self._angle_difference(desired_heading, float(snapshot["heading"]))
+            error = self._angle_difference(
+                desired_heading, float(snapshot["heading"])
+            )
             steering = float(clamp(error * 0.90, -0.6, 0.6))
 
         await self.state.set_controls(steering=steering)
@@ -134,7 +141,9 @@ class AutopilotECU:
             ):
                 timeout = max(0.001, next_control - time.monotonic())
                 try:
-                    frame = await asyncio.wait_for(self._queue.get(), timeout=timeout)
+                    frame = await asyncio.wait_for(
+                        self._queue.get(), timeout=timeout
+                    )
                 except asyncio.TimeoutError:
                     frame = None
                 if frame is not None:

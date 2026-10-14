@@ -30,7 +30,6 @@ async def _await_if_needed(value: Any) -> Any:
 
 
 class InfotainmentECU:
-
     name = "infotainment"
 
     def __init__(
@@ -49,7 +48,9 @@ class InfotainmentECU:
             if parser_path is not None
             else Path(__file__).resolve().parents[1] / "native" / "id3parse"
         )
-        self._records = RecordStore(self.storage_dir / "records.sqlite3", lifetime=retention_seconds)
+        self._records = RecordStore(
+            self.storage_dir / "records.sqlite3", lifetime=retention_seconds
+        )
         self._lock = asyncio.Lock()
         self._stop_event = asyncio.Event()
         self._healthy = False
@@ -82,7 +83,9 @@ class InfotainmentECU:
             flag = metadata.get("COMM")
             if not flag:
                 raise MediaFormatError("ID3 COMM frame is required")
-            await asyncio.to_thread(self._write_private, flag_path, flag.encode("utf-8"))
+            await asyncio.to_thread(
+                self._write_private, flag_path, flag.encode("utf-8")
+            )
         except Exception:
             await asyncio.to_thread(self._unlink_if_exists, media_path)
             await asyncio.to_thread(self._unlink_if_exists, flag_path)
@@ -92,11 +95,17 @@ class InfotainmentECU:
             self._records.put("media", track_id, owner, b"")
             expired = self._records.prune("media")
         for old in expired:
-            await asyncio.to_thread(self._unlink_if_exists, self.storage_dir / f"{old.key}.flag")
-            await asyncio.to_thread(self._unlink_if_exists, self.media_dir / f"{old.key}.mp3")
+            await asyncio.to_thread(
+                self._unlink_if_exists, self.storage_dir / f"{old.key}.flag"
+            )
+            await asyncio.to_thread(
+                self._unlink_if_exists, self.media_dir / f"{old.key}.mp3"
+            )
 
         await self._log("accepted media upload")
-        public_metadata = {key: value for key, value in metadata.items() if key != "COMM"}
+        public_metadata = {
+            key: value for key, value in metadata.items() if key != "COMM"
+        }
         return track_id, public_metadata
 
     async def get_media_flag(self, track_id: str, owner: str) -> str | None:
@@ -106,7 +115,9 @@ class InfotainmentECU:
         if record is None:
             return None
         try:
-            return await asyncio.to_thread((self.storage_dir / f"{record.key}.flag").read_text, "utf-8")
+            return await asyncio.to_thread(
+                (self.storage_dir / f"{record.key}.flag").read_text, "utf-8"
+            )
         except FileNotFoundError:
             return None
 
@@ -138,7 +149,8 @@ class InfotainmentECU:
                 stop_task = asyncio.create_task(stop_event.wait())
                 local_task = asyncio.create_task(self._stop_event.wait())
                 done, pending = await asyncio.wait(
-                    {stop_task, local_task}, return_when=asyncio.FIRST_COMPLETED
+                    {stop_task, local_task},
+                    return_when=asyncio.FIRST_COMPLETED,
                 )
                 for task in pending:
                     task.cancel()
@@ -152,7 +164,9 @@ class InfotainmentECU:
         finally:
             self._healthy = False
 
-    async def _read_metadata(self, media_path: Path, content: bytes) -> dict[str, str]:
+    async def _read_metadata(
+        self, media_path: Path, content: bytes
+    ) -> dict[str, str]:
         if self.parser_path.is_file():
             process = await asyncio.create_subprocess_exec(
                 str(self.parser_path),
@@ -161,7 +175,9 @@ class InfotainmentECU:
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, _stderr = await asyncio.wait_for(process.communicate(), timeout=2.0)
+                stdout, _stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=2.0
+                )
             except asyncio.TimeoutError as exc:
                 process.kill()
                 await process.wait()
@@ -205,10 +221,14 @@ class InfotainmentECU:
             try:
                 frame_id = frame_id_bytes.decode("ascii")
             except UnicodeDecodeError:
-                raise MediaFormatError("invalid ID3 frame identifier") from None
+                raise MediaFormatError(
+                    "invalid ID3 frame identifier"
+                ) from None
             size_bytes = content[cursor + 4 : cursor + 8]
             frame_size = (
-                cls._synchsafe(size_bytes) if version == 4 else int.from_bytes(size_bytes, "big")
+                cls._synchsafe(size_bytes)
+                if version == 4
+                else int.from_bytes(size_bytes, "big")
             )
             frame_start = cursor + 10
             frame_end = frame_start + frame_size
@@ -216,7 +236,9 @@ class InfotainmentECU:
                 raise MediaFormatError("truncated ID3 frame")
             name = _ID3_FRAME_NAMES.get(frame_id)
             if name:
-                value = cls._decode_frame(frame_id, content[frame_start:frame_end])
+                value = cls._decode_frame(
+                    frame_id, content[frame_start:frame_end]
+                )
                 if value:
                     metadata[name] = value
             cursor = frame_end
@@ -240,7 +262,9 @@ class InfotainmentECU:
             raw_text = payload[text_start:]
         else:
             raw_text = payload[1:]
-        codec = {0: "latin-1", 1: "utf-16", 2: "utf-16-be", 3: "utf-8"}.get(encoding)
+        codec = {0: "latin-1", 1: "utf-16", 2: "utf-16-be", 3: "utf-8"}.get(
+            encoding
+        )
         if codec is None:
             return ""
         return raw_text.decode(codec, errors="replace").rstrip("\0")
@@ -359,5 +383,7 @@ def extract_media_pack(archive_bytes: bytes, destination: str | Path) -> None:
 
     target = Path(destination)
     target.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:*") as archive:
+    with tarfile.open(
+        fileobj=io.BytesIO(archive_bytes), mode="r:*"
+    ) as archive:
         archive.extractall(target)

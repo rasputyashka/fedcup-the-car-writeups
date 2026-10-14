@@ -9,7 +9,13 @@ import secrets
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -29,7 +35,6 @@ async def _maybe_await(value: Any) -> Any:
 
 
 class AccountRegistry:
-
     def __init__(self, path: str | Path | None = None) -> None:
         self._records = RecordStore(path)
         self._lock = asyncio.Lock()
@@ -44,19 +49,27 @@ class AccountRegistry:
 
     @staticmethod
     def _derive(password: str, salt: bytes) -> bytes:
-        return hashlib.scrypt(password.encode("utf-8"), salt=salt, n=2**12, r=8, p=1)
+        return hashlib.scrypt(
+            password.encode("utf-8"), salt=salt, n=2**12, r=8, p=1
+        )
 
     async def register(self, username: object, password: object) -> None:
         username, password = self._validate(username, password)
         async with self._lock:
             salt = secrets.token_bytes(16)
             if not self._records.put(
-                "accounts", username, username, salt + self._derive(password, salt),
-                permanent=True, create_only=True,
+                "accounts",
+                username,
+                username,
+                salt + self._derive(password, salt),
+                permanent=True,
+                create_only=True,
             ):
                 raise ValueError("account already exists")
 
-    async def authenticate(self, username: object, password: object) -> str | None:
+    async def authenticate(
+        self, username: object, password: object
+    ) -> str | None:
         try:
             username, password = self._validate(username, password)
         except ValueError:
@@ -120,7 +133,13 @@ def create_api(runtime: Any) -> FastAPI:
 
     @app.get("/api/health")
     async def health() -> dict[str, object]:
-        ecus = (runtime.engine, runtime.abs, runtime.autopilot, runtime.telemetry, runtime.infotainment)
+        ecus = (
+            runtime.engine,
+            runtime.abs,
+            runtime.autopilot,
+            runtime.telemetry,
+            runtime.infotainment,
+        )
         if not all(await asyncio.gather(*(_ping(ecu) for ecu in ecus))):
             raise _json_error(503, "ecu unavailable")
         return {"status": "ok"}
@@ -146,25 +165,33 @@ def create_api(runtime: Any) -> FastAPI:
     @app.post("/api/media/register")
     async def media_register(payload: dict[str, Any]) -> dict[str, str]:
         try:
-            await _registry(runtime, "media_accounts").register(payload.get("u"), payload.get("p"))
+            await _registry(runtime, "media_accounts").register(
+                payload.get("u"), payload.get("p")
+            )
         except ValueError as exc:
             raise _json_error(409, str(exc)) from exc
         return {"status": "ok"}
 
     @app.post("/api/media/upload")
     async def media_upload(payload: dict[str, Any]) -> dict[str, str]:
-        owner = await _registry(runtime, "media_accounts").authenticate(payload.get("u"), payload.get("p"))
+        owner = await _registry(runtime, "media_accounts").authenticate(
+            payload.get("u"), payload.get("p")
+        )
         if owner is None:
             raise _json_error(401, "invalid credentials")
         mp3 = _decode_b64(payload.get("mp3_b64"), label="mp3_b64")
         try:
-            track_id, _metadata = await runtime.infotainment.upload_media(mp3, owner)
+            track_id, _metadata = await runtime.infotainment.upload_media(
+                mp3, owner
+            )
         except Exception as exc:
             raise _json_error(422, "media rejected") from exc
         return {"track_id": track_id}
 
     @app.get("/api/media/flag/{track_id}")
-    async def media_flag(track_id: str, u: str = "", p: str = "") -> PlainTextResponse:
+    async def media_flag(
+        track_id: str, u: str = "", p: str = ""
+    ) -> PlainTextResponse:
         owner = await _registry(runtime, "media_accounts").authenticate(u, p)
         if owner is None:
             raise _json_error(401, "invalid credentials")
@@ -178,7 +205,9 @@ def create_api(runtime: Any) -> FastAPI:
         image = _decode_b64(payload.get("image_b64"), label="image_b64")
         values = payload.get("values", {})
         try:
-            return await _maybe_await(runtime.infotainment.evaluate_album_art(image, values))
+            return await _maybe_await(
+                runtime.infotainment.evaluate_album_art(image, values)
+            )
         except AttributeError as exc:
             raise _json_error(501, "album-art handler unavailable") from exc
         except Exception as exc:
@@ -188,7 +217,9 @@ def create_api(runtime: Any) -> FastAPI:
     async def media_pack(payload: dict[str, Any]) -> dict[str, object]:
         archive = _decode_b64(payload.get("tar_b64"), label="tar_b64")
         try:
-            extracted = await _maybe_await(runtime.infotainment.extract_media_pack(archive))
+            extracted = await _maybe_await(
+                runtime.infotainment.extract_media_pack(archive)
+            )
         except AttributeError as exc:
             raise _json_error(501, "media-pack handler unavailable") from exc
         except Exception as exc:
@@ -198,14 +229,18 @@ def create_api(runtime: Any) -> FastAPI:
     @app.post("/api/blackbox/register")
     async def blackbox_register(payload: dict[str, Any]) -> dict[str, str]:
         try:
-            await _registry(runtime, "blackbox_accounts").register(payload.get("u"), payload.get("p"))
+            await _registry(runtime, "blackbox_accounts").register(
+                payload.get("u"), payload.get("p")
+            )
         except ValueError as exc:
             raise _json_error(409, str(exc)) from exc
         return {"status": "ok"}
 
     @app.post("/api/blackbox/store")
     async def blackbox_store(payload: dict[str, Any]) -> dict[str, str]:
-        owner = await _registry(runtime, "blackbox_accounts").authenticate(payload.get("u"), payload.get("p"))
+        owner = await _registry(runtime, "blackbox_accounts").authenticate(
+            payload.get("u"), payload.get("p")
+        )
         flag = payload.get("flag")
         if owner is None:
             raise _json_error(401, "invalid credentials")
@@ -215,8 +250,12 @@ def create_api(runtime: Any) -> FastAPI:
         return {"record_id": record_id}
 
     @app.get("/api/blackbox/get/{record_id}")
-    async def blackbox_get(record_id: str, u: str = "", p: str = "") -> PlainTextResponse:
-        owner = await _registry(runtime, "blackbox_accounts").authenticate(u, p)
+    async def blackbox_get(
+        record_id: str, u: str = "", p: str = ""
+    ) -> PlainTextResponse:
+        owner = await _registry(runtime, "blackbox_accounts").authenticate(
+            u, p
+        )
         if owner is None:
             raise _json_error(401, "invalid credentials")
         flag = await runtime.telemetry.get_blackbox(record_id, owner)
