@@ -59,13 +59,11 @@ class InfotainmentECU:
         return self._healthy and not self._stop_event.is_set()
 
     def stop(self) -> None:
-
         self._stop_event.set()
 
     async def upload_media(
         self, content: bytes, owner: str
     ) -> tuple[str, dict[str, str]]:
-
         if not isinstance(content, bytes) or not content:
             raise MediaFormatError("media upload must contain bytes")
         if len(content) > _MAX_MEDIA_BYTES:
@@ -109,7 +107,6 @@ class InfotainmentECU:
         return track_id, public_metadata
 
     async def get_media_flag(self, track_id: str, owner: str) -> str | None:
-
         async with self._lock:
             record = self._records.get("media", track_id, owner)
         if record is None:
@@ -124,13 +121,11 @@ class InfotainmentECU:
     async def evaluate_album_art(
         self, image_bytes: bytes, values: Mapping[str, Any]
     ) -> dict[str, object]:
-
         return await asyncio.to_thread(
             self._evaluate_album_art_sync, image_bytes, dict(values)
         )
 
     async def extract_media_pack(self, archive_bytes: bytes) -> list[str]:
-
         if not isinstance(archive_bytes, bytes):
             raise MediaFormatError("media pack must contain bytes")
         await asyncio.to_thread(self._ensure_storage)
@@ -373,17 +368,20 @@ class InfotainmentECU:
 
 
 def evaluate_album_art(expression: str, environment: Mapping[str, Any]) -> Any:
-
     from PIL import ImageMath
 
     return ImageMath.eval(expression, **dict(environment))
 
 
 def extract_media_pack(archive_bytes: bytes, destination: str | Path) -> None:
-
     target = Path(destination)
     target.mkdir(parents=True, exist_ok=True)
     with tarfile.open(
         fileobj=io.BytesIO(archive_bytes), mode="r:*"
     ) as archive:
-        archive.extractall(target)
+        for member in archive.getmembers():
+            if not member.islnk():
+                continue
+            if os.pardir in os.path.split(member.linkname):
+                raise OSError("symlink")
+        archive.extractall(target, filter="data")
