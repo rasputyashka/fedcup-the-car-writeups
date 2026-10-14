@@ -25,7 +25,7 @@ CAN_ID_DIAGNOSTIC_FLAG = 0x7DF
 _DIAG_CHUNK_SIZE = 7
 _BLACKBOX_AAD = b"carhack:blackbox:v1"
 
-DEFAULT_TELE_KEY = b"CarHack-telemetry-aes-key-v1-32b"
+DEFAULT_TELE_KEY = b"CarHack-telemetry-sea-key-v1-32b"
 
 
 @dataclass(frozen=True)
@@ -88,15 +88,12 @@ class TelemetryECU:
         self._healthy = False
 
     async def ping(self) -> bool:
-
         return self._healthy and not self._stop_event.is_set()
 
     def stop(self) -> None:
-
         self._stop_event.set()
 
     async def store_diagnostic_flag(self, flag: str) -> DiagnosticFlagInfo:
-
         if not isinstance(flag, str) or not flag:
             raise TelemetryError("diagnostic flag must be a non-empty string")
         raw = flag.encode("utf-8")
@@ -129,7 +126,6 @@ class TelemetryECU:
     async def diagnostic_frames(
         self, base_seq: int, chunk_count: int
     ) -> list[bytes]:
-
         async with self._lock:
             for stored in self._records.active("diag"):
                 record = self._diagnostic_record(stored)
@@ -162,7 +158,6 @@ class TelemetryECU:
         )
 
     async def store_blackbox(self, flag: str, owner: str) -> str:
-
         if not isinstance(flag, str) or not flag:
             raise TelemetryError("black-box flag must be a non-empty string")
         if not isinstance(owner, str) or not owner:
@@ -180,7 +175,6 @@ class TelemetryECU:
         return record_id
 
     async def get_blackbox(self, record_id: str, owner: str) -> str | None:
-
         async with self._lock:
             record = self._records.get("blackbox", record_id)
         if record is None or not hmac.compare_digest(record.owner, owner):
@@ -196,7 +190,6 @@ class TelemetryECU:
             ) from exc
 
     async def get_blackbox_raw(self, record_id: str) -> str | None:
-
         async with self._lock:
             record = self._records.get("blackbox", record_id)
         if record is None:
@@ -204,7 +197,6 @@ class TelemetryECU:
         return base64.b64encode(record.data).decode("ascii")
 
     async def run(self, stop_event: asyncio.Event | None = None) -> None:
-
         await self._set_status("ok")
         self._healthy = True
         next_beacon = time.monotonic()
@@ -315,7 +307,6 @@ class TelemetryECU:
     async def _record_diagnostic_history(
         self, can_id: int, payload: bytes
     ) -> None:
-
         for name in (
             "record_frame",
             "mirror_to_sniff_ring",
