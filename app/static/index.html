@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141719">
+  <title>ВАЗ-2106 - гараж the_car</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#inspector">Перейти к настройкам</a>
+  <header class="site-header">
+    <div class="brand"><span class="wordmark">the_car</span><span class="section-name">Гараж</span></div>
+    <span id="connection" role="status">Нет подключения</span>
+  </header>
+  <main id="hud">
+    <section id="scene-wrap" aria-labelledby="vehicle-title">
+      <div class="vehicle-heading">
+        <h1 id="vehicle-title">ВАЗ-2106</h1>
+        <p>Жигули · классический седан</p>
+      </div>
+      <canvas id="scene" tabindex="0" aria-label="Трёхмерная модель ВАЗ-2106" aria-describedby="scene-help" aria-busy="true"></canvas>
+      <div id="scene-status" class="scene-message" role="status">Загружаем модель…</div>
+      <div id="scene-error" class="scene-message scene-error" role="alert" hidden>
+        <p id="scene-error-message">Не удалось показать модель. Перезагрузите страницу, чтобы попробовать снова.</p>
+        <button id="reload-scene" type="button">Перезагрузить</button>
+      </div>
+      <div class="scene-controls">
+        <div class="view-controls" role="group" aria-label="Ракурс камеры">
+          <button type="button" data-view="perspective" aria-pressed="true" aria-label="Ракурс 3/4">3/4</button>
+          <button type="button" data-view="front" aria-pressed="false">Спереди</button>
+          <button type="button" data-view="side" aria-pressed="false">Сбоку</button>
+          <button type="button" data-view="rear" aria-pressed="false">Сзади</button>
+        </div>
+        <div class="camera-actions">
+          <button id="auto-rotate" type="button" aria-pressed="false">Вращать обзор</button>
+          <button id="reset-view" type="button">Сбросить вид</button>
+        </div>
+        <p id="scene-help"><span class="pointer-help">Потяните, чтобы повернуть · Колесо мыши - масштаб</span><span class="touch-help">Потяните, чтобы повернуть · Два пальца - масштаб</span><span class="keyboard-help">Клавиатура: стрелки - обзор, + / − - масштаб</span></p>
+      </div>
+    </section>
+    <aside id="inspector" aria-labelledby="inspector-title" tabindex="-1">
+      <div class="inspector-heading">
+        <h2 id="inspector-title">Настройка вида</h2>
+        <p>Цвет, положение колёс и свет.</p>
+      </div>
+      <section class="control-section" aria-labelledby="paint-title">
+        <h3 id="paint-title">Цвет кузова</h3>
+        <div class="paint-swatches" role="group" aria-label="Цвет кузова">
+          <button class="paint-swatch paint-ivory" type="button" data-color="#dfd6c0" aria-label="Слоновая кость" title="Слоновая кость" aria-pressed="true"><span aria-hidden="true">✓</span></button>
+          <button class="paint-swatch paint-green" type="button" data-color="#697b68" aria-label="Оливковый" title="Оливковый" aria-pressed="false"><span aria-hidden="true">✓</span></button>
+          <button class="paint-swatch paint-cherry" type="button" data-color="#963f35" aria-label="Вишнёвый" title="Вишнёвый" aria-pressed="false"><span aria-hidden="true">✓</span></button>
+          <button class="paint-swatch paint-silver" type="button" data-color="#d2d6d6" aria-label="Светло-серый" title="Светло-серый" aria-pressed="false"><span aria-hidden="true">✓</span></button>
+        </div>
+        <p id="paint-name" class="control-description">Слоновая кость</p>
+      </section>
+      <section class="control-section steering-section" aria-labelledby="steering-title">
+        <div class="section-heading">
+          <h3 id="steering-title"><label for="steering">Поворот колёс</label></h3>
+          <output id="steering-value" for="steering">0°</output>
+        </div>
+        <input id="steering" type="range" min="-30" max="30" step="1" value="0">
+        <div class="range-caption" aria-hidden="true"><span>Влево</span><span>Вправо</span></div>
+        <button id="center-steering" class="secondary-button" type="button">Выровнять</button>
+      </section>
+      <section class="control-section" aria-labelledby="details-title">
+        <h3 id="details-title">Детали модели</h3>
+        <div class="toggle-controls">
+          <button id="wheel-spin" class="toggle-button" type="button" aria-pressed="false"><span>Вращение колёс</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+          <button id="headlights" class="toggle-button" type="button" aria-pressed="false"><span>Фары</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+          <button id="show-systems" class="toggle-button" type="button" aria-pressed="false"><span>Показать блоки</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+        </div>
+      </section>
+      <details id="diagnostics">
+        <summary>Состояние автомобиля</summary>
+        <div class="diagnostics-content">
+          <p class="control-description">Выберите блок, чтобы открыть его журнал.</p>
+          <div id="ecus" role="group" aria-label="Блоки автомобиля"></div>
+          <div class="explode-control">
+            <div class="section-heading"><label for="explode">Разнести блоки</label><output id="explode-value" for="explode">0%</output></div>
+            <input id="explode" type="range" min="0" max="1" step="0.01" value="0">
+          </div>
+          <section class="logs" aria-labelledby="log-title">
+            <h3 id="log-title">Журнал блока</h3>
+            <pre id="log-output" tabindex="0">Данные ещё не получены.</pre>
+          </section>
+        </div>
+      </details>
+      <p class="inspector-note">Модель неподвижна. Настройки меняют её внешний вид.</p>
+    </aside>
+  </main>
+  <footer class="telemetry-footer" aria-label="Телеметрия автомобиля">
+    <span class="telemetry-label">Телеметрия</span>
+    <dl>
+      <div><dt>Скорость</dt><dd id="speed">-</dd></div>
+      <div><dt>Курс</dt><dd id="heading">-</dd></div>
+      <div><dt>Поворотник</dt><dd id="signal">-</dd></div>
+    </dl>
+  </footer>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
