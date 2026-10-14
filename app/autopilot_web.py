@@ -210,7 +210,6 @@ class AutopilotStore:
             return self._read_text(self.route_store / key)
 
     def read_export(self, requested_path: str) -> Optional[str]:
-
         if (
             not requested_path
             or "\x00" in requested_path
@@ -454,7 +453,6 @@ class JwtKeyMaterial:
         return token.decode("ascii") if isinstance(token, bytes) else token
 
     def decode(self, token: str) -> Session:
-
         try:
             algorithm = jwt.get_unverified_header(token).get("alg")
             if algorithm == SERVICE_TOKEN_ALGORITHM:
@@ -521,7 +519,6 @@ def create_autopilot_app(
     jwt_private_key: Optional[str] = None,
     jwt_public_key: Optional[str] = None,
 ) -> FastAPI:
-
     app = FastAPI(title="the_car Autopilot", docs_url=None, redoc_url=None)
     app.state.trust = trust or CheckerTrust.from_environment()
     app.state.store = AutopilotStore(
@@ -786,7 +783,7 @@ def create_autopilot_app(
             )
         try:
             text = body.decode("utf-8")
-            yaml.load(text, Loader=yaml.Loader)
+            yaml.safe_load(text)
         except (UnicodeDecodeError, yaml.YAMLError, TypeError, ValueError):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
